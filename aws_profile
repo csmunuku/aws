@@ -1,0 +1,697 @@
+################################################################################
+## AWS PROFILE                                                                 #
+## AUTHOR:      Chandra Munukutla                                              #
+## DESCRIPTION: few little utilities                                           #
+################################################################################
+alias c='clear'
+alias lt='ls -lrt'
+alias la='ls -alrt'
+alias ll='ls -alrt'
+alias dfc='df -hPT | column -t'
+ts(){ echo "$(date '+%Y%m%d_%H%M%S')"; }
+#####################################
+# GREP Color Options
+#####################################
+alias grep="grep --color=auto"
+alias fgrep="fgrep --color=auto"
+alias egrep="egrep --color=auto"
+#GREP_COLORS='ms=1;31:mc=1;31:sl=:cx=:fn=35:ln=32:bn=32:se=36'
+#export GREP_COLORS
+#####################################################################
+ec2-metadata_check()
+{
+  command -v ec2-metadata &>/dev/null || {
+    echo "ERROR: \"ec2-metadata\" is NOT FOUND!"
+	echo "Try installing \"ec2-metadata\" using below commands.."
+	echo "sudo curl http://s3.amazonaws.com/ec2metadata/ec2-metadata -o /usr/local/bin/ec2-metadata && \
+	chmod +x /usr/local/bin/ec2-metadata"
+  }
+}
+ec2-metadata_check
+#####################################################################
+jq_check()
+{
+  command -v jq &>/dev/null || {
+    echo "ERROR: \"jq\" is NOT FOUND! profile might not work"
+	echo "Try installing \"jq\" using below command.."
+	echo "sudo yum install -y jq"
+	echo "OR"
+	echo "sudo dnf install jq"
+  }
+}
+jq_check
+#####################################################################
+myfns()
+{
+   if [ $# -ne 1 ]; then
+      profile="$HOME/.bash_profile"
+   elif [ $# -eq 1 ]; then
+      profile="${1}"
+   fi
+   echo "#####################################################################"
+   echo "Functions in the \"$profile\" file are:"
+   echo "#####################################################################"
+   word_fn=$(grep -v "^#" ${profile} | grep "function " | grep '{' | cut -d' ' -f2 | sort)
+   brackets_fn=$(grep -v "^#" ${profile} | grep "()" | grep -v grep | cut -d'(' -f1 | sort)
+   count=1
+   for i in $(echo $word_fn $brackets_fn)
+   do
+     echo -n "$count - "
+     echo $i
+     ((count=count+1))
+   done | pr --columns 4 -T -W140
+   echo "#####################################################################"    
+}
+
+allfns()
+{
+  if [ $# -ne 1 ]; then
+     profile="$HOME/.bash_profile"
+  elif [ $# -eq 1 ]; then
+     profile="${1}"
+  fi
+  myfns ${profile}
+  for i in $(grep -E "\. \.|\. /|source " ${profile} | awk '{print $2}')
+  do
+    myfns ${i}
+  done
+}
+#####################################################################
+fns()
+{
+   USER=$(whoami)
+   if [[ $# -eq 1 && -f $1 ]]; then
+        myfns ${1}
+   else
+      if [[ -f ${HOME}/.bash_profile ]]; then
+         myfns "${HOME}/.bash_profile"
+	  fi
+      if [[ -f ${HOME}/.${USER}_profile ]]; then
+         myfns "${HOME}/.${USER}_profile"
+	  fi
+	  if [[ -f ${HOME}/.aws_profile ]]; then
+         myfns ${HOME}/.aws_profile
+      fi
+	fi
+}
+alias lsf=fns
+##########################################################################
+##########################################################################
+##########################################################################
+##########################################################################
+is_nitro_instance()
+{
+  if [[ -f /sys/devices/virtual/dmi/id/board_asset_tag ]] && [[ $(cat /sys/devices/virtual/dmi/id/board_asset_tag | cut -c1-2) == "i-" ]]; then
+#     echo "AWS Nitro Instance"
+	 true
+  else
+     false
+  fi
+}
+#########################################################################
+is_hypervisor_uuid()
+{
+  if [[ -f /sys/hypervisor/uuid ]] && [[ "$(cut -c1-3 /sys/hypervisor/uuid)" == "ec2" ]]; then
+#     echo "AWS - Node is EC2 instance"
+	 true
+  else
+     false
+  fi
+}
+#########################################################################
+inst_metadata()
+{
+  if [[ $(curl -s -m 2 -q  http://169.154.169.254/latest/meta-data/ -o /tmp/test.txt) ]]; then
+     rm /tmp/test.txt
+     true
+  else
+     false
+  fi
+}
+#########################################################################
+is_aws()
+{
+  if [[ $(curl -s http://169.254.169.254/latest/meta-data/services/partition | cut -c1-3) == "aws" ]]; then
+     true
+  else
+     false
+  fi
+}
+#########################################################################
+is_ec2()
+{
+  ERROR=false
+  is_nitro_instance || is_hypervisor_uuid 
+  if [[ "$(uname)" == "Linux" && (inst_metadata || is_nitro_instance || is_hypervisor_uuid || is_aws) ]]; then
+     true
+  else
+     false
+  fi
+}
+#########################################################################
+my_ip()
+{
+  if is_ec2; then
+     hash ec2-metadata 2>/dev/null && { ec2-metadata -o | cut -d':' -f2 | sed 's/ //g'; } || { /sbin/ifconfig eth0 | grep "inet " | awk '{print $2}' | cut -d':' -f2; }
+  else
+     /sbin/ifconfig eth0 | grep "inet addr:" | awk -F: '{print $2}' | cut -d' ' -f1
+  fi
+}
+alias myip=my_ip
+#########################################################################
+jq_check()
+{
+  command -v jq &>/dev/null || {
+    echo "ERROR: \"${1}\" NOT FOUND! profile might not work"
+	echo "Try installing \"jq\" using below command.."
+	echo "sudo yum install -y jq"
+  }
+}
+jq_check
+#########################################################################
+
+if is_ec2; then
+   instance_id()
+   {
+     echo $(ec2-metadata -i | cut -d' ' -f2)
+   }
+   alias instid=instance_id
+   alias inst_id=instance_id
+   
+   userdata()
+   {
+     echo $(ec2-metadata -d)
+   }
+   
+   security_groups()
+   {
+     echo $(ec2-metadata -s | cut -d' ' -f2)
+   }
+   alias sg=security_groups
+   alias securitygroups=security_groups
+   
+   public_ip()
+   {
+     echo $(ec2-metadata -v | cut -d' ' -f2)
+   }
+   alias public=public_ip
+   alias publicip=public_ip
+   
+   private_ip()
+   {
+     echo $(ec2-metadata -o | cut -d' ' -f2)
+   }
+   alias private=private_ip
+   alias privateip=private_ip
+   
+   zone()
+   {
+     echo $(ec2-metadata -z | cut -d' ' -f2)
+   }
+   alias az=zone
+   
+   region()
+   {
+     echo $(ec2-metadata -z | cut -d' ' -f2 | sed 's/.$//')
+   }
+   my_region=$(region)
+   mac()
+   {
+     curl http://169.254.169.254/latest/meta-data/mac && echo
+   }
+fi
+#####################################################################
+ask_tag()
+{
+  ERROR=false
+  # you need to provide tag to query (and get results) based on the tag.
+  if [[ $# -eq 1 ]]; then
+     my_tag="${1}"
+  else
+     echo -n "Provide tag: "
+     read my_tag
+     if [[ -z $my_tag ]]; then
+        echo "ERROR: Tag is empty!!"
+	    echo "ERROR: Please provide tag!!"
+		ERROR=true
+     fi
+  fi
+}
+#####################################################################
+ask_pipeline_name()
+{
+  ERROR=false
+  # Ask a pipeline name
+  if [[ $# -eq 1 ]]; then
+     my_pipeline="${1}"
+  else
+     echo -n "Please Provide Pipeline Name: "
+     read my_pipeline
+     if [[ -z $my_pipeline ]]; then
+        echo "ERROR: Pipeline Name is empty!!"
+	    echo "ERROR: Please provide Pipeline Name!!"
+		ERROR=true
+     fi
+  fi
+}
+#####################################################################
+ask_pipeline_exec_id()
+{
+  ERROR=false
+  echo -n "Please Provide Pipeline Execution ID: "
+  read pipeline_exec_id
+  if [[ -z $pipeline_exec_id ]]; then
+     echo "ERROR: Pipeline Execution ID is empty!!"
+     echo "ERROR: Please provide Pipeline Execution ID!!"
+	 ERROR=true
+  fi
+}
+#####################################################################
+ask_region()
+{ 
+  # if you are on a your laptop, ask for region input
+  # if you are on aws node then, the aws cli commands use a Role 
+  # "hyla-aws-main-role" OR "prod-aws-main-role" OR "nonp-aws-main-role" to figure out the region.
+  # 
+  if is_ec2; then
+     echo "On EC2 Node.."
+	 my_region=$(region)
+	 REGION="--region ${my_region}"
+  else
+     echo -n "region: [default: us-east-1]"
+     read my_region
+     if [[ -z $my_region ]]; then
+        my_region="us-east-1"
+     fi
+	 REGION="--region ${my_region}"
+  fi
+}
+#####################################################################
+ask_profile()
+{
+  ERROR=false
+  # if you are on a your laptop, ask for profile input
+  # if you are on aws node, then, the aws cli commands use a Role "hyla-aws-main-role"
+  if ! is_ec2; then
+     echo -n "profile: "
+     read my_profile
+     if [[ -z $my_profile ]]; then
+        echo "ERROR: Profile NOT provided.."
+		ERROR=true
+		PRO=
+     else
+	    PRO="--profile ${my_profile}"
+     fi
+  else
+     PRO=
+  fi
+}
+#####################################################################
+get_bastion_ips()
+{
+  ask_region
+  ask_profile
+  if ! ${ERROR}; then
+    aws ec2 describe-instances --filters "Name=tag:Name,Values=*bastion*" ${REGION} --query 'Reservations[].Instances[].[Tags[?Key==`Name`].Value[],PublicIpAddress]' --output text ${PRO} | sed 's/None$/None\n/' | sed '$!N;s/\n/ /' | sort -k 2 | awk '{print $2, $1}'
+  fi
+}
+alias bastion="get_bastion_ips"
+#####################################################################
+get_vpc_ids()
+{
+  ERROR=false
+  if [ -z ${my_region} ]; then ask_region; fi
+  if [ -z ${my_profile} ]; then ask_profile; fi
+  if ! ${ERROR}; then
+     aws ec2 describe-vpcs ${REGION} ${PRO} | jq -cr .Vpcs[].VpcId
+  fi
+}
+#####################################################################
+print_tags_private_ips()
+{
+  ask_region
+  ask_profile
+  echo
+  get_vpc_ids ${my_profile} > temp_file
+  for i in $(cat temp_file)
+  do
+	aws ec2 describe-instances --filters Name=vpc-id,Values=${i} ${REGION} --query 'Reservations[].Instances[].[Tags[?Key==`Name`].Value[],PrivateIpAddress]' --output text ${PRO} | sed 's/None$/None\n/' | sed '$!N;s/\n/ /' | sort -k 2 | awk '{print $2, $1}'
+  done
+  echo
+  /bin/rm temp_file
+}
+#####################################################################
+get_private_ip_by_tag()
+{
+  if [[ $# -eq 1 ]]; then
+     ask_tag ${1}
+     ask_region
+     ask_profile
+     test -n $my_tag && {
+       aws ec2 describe-instances --filters "Name=tag:Name,Values=*${my_tag}*" ${REGION} --query 'Reservations[*].Instances[*].[Tags[?Key==`Name`].Value[],PrivateIpAddress]' ${PRO} --output text | sed 's/None$/None\n/' | sed '$!N;s/\n/ /' | awk '{print $2, $1}'
+     }
+  fi
+  echo
+}
+#####################################################################
+anchors()
+{
+  ask_tag anchor
+  ask_region
+  ask_profile
+  test -n $my_tag && {
+    aws ec2 describe-instances --filters "Name=tag:Name,Values=*${my_tag}*" ${REGION} --query 'Reservations[*].Instances[*].[Tags[?Key==`Name`].Value[],PrivateIpAddress]' ${PRO} --output text | sed 's/None$/None\n/' | sed '$!N;s/\n/ /' | awk '{print $2, $1}'
+  }
+
+  echo
+}
+#####################################################################
+appservers()
+{
+  ask_tag appserver
+  ask_region
+  ask_profile
+  test -n $my_tag && {
+    aws ec2 describe-instances --filters "Name=tag:Name,Values=*${my_tag}*" ${REGION} --query 'Reservations[*].Instances[*].[Tags[?Key==`Name`].Value[],PrivateIpAddress]' ${PRO} --output text | sed 's/None$/None\n/' | sed '$!N;s/\n/ /' | awk '{print $2, $1}'
+  }
+
+  echo
+}
+#####################################################################
+webservers()
+{
+  ask_tag webserver
+  ask_region
+  ask_profile
+  test -n $my_tag && {
+    aws ec2 describe-instances --filters "Name=tag:Name,Values=*${my_tag}*" ${REGION} --query 'Reservations[*].Instances[*].[Tags[?Key==`Name`].Value[],PrivateIpAddress]' ${PRO} --output text | sed 's/None$/None\n/' | sed '$!N;s/\n/ /' | awk '{print $2, $1}'
+  }
+
+  echo
+}
+#####################################################################
+get_public_ip_by_tag()
+{
+  if [[ $# -eq 1 ]]; then
+     ask_tag ${1}
+     ask_region
+     ask_profile
+	 test -n $my_tag && {
+       aws ec2 describe-instances --filters "Name=tag:Name,Values=*${my_tag}*" ${REGION} --query "Reservations[].Instances[].PublicIpAddress" --output=text ${PRO}
+	 }
+  fi
+  echo
+}
+#####################################################################
+get_all_tags()
+{
+  ask_region
+  ask_profile
+  if [[ $# -eq 0 ]]; then
+     aws ec2 describe-tags --filters "Name=value,Values=*" ${REGION} ${PRO} | jq -cr '.Tags[].Value' | sort -u
+     echo
+  else
+     aws ec2 describe-tags --filters "Name=value,Values=*${1}*" ${REGION} ${PRO} | jq -cr '.Tags[].Value' | sort -u
+     echo
+  fi
+}
+alias tags="get_all_tags"
+#####################################################################
+list_all_regions()
+{
+  ask_region
+  aws ec2 describe-regions ${REGION} --query "Regions[].{Name:RegionName}" --output text
+  echo "More info from https://docs.aws.amazon.com/cli/latest/reference/ec2/describe-regions.html"
+  echo
+}
+#####################################################################
+get_intIP_and_inst_ids_by_tag()
+{
+  ask_tag ${1}
+  ask_region
+  ask_profile
+  test -n $my_tag && {
+    aws ec2 describe-instances ${REGION} --filters "Name=tag:Name,Values=*${my_tag}*" --query 'Reservations[].Instances[].[Tags[?Key==`Name`].Value[],PrivateIpAddress,InstanceId]' --output text ${PRO}
+  }
+  echo
+}
+#####################################################################
+get_inst_ids_by_tag()
+{
+  ask_tag ${1}
+  ask_region
+  ask_profile
+  test -n $my_tag && {
+    aws ec2 describe-instances ${REGION} --filters "Name=tag:Name,Values=*${my_tag}*" --query 'Reservations[].Instances[].[Tags[?Key==`Name`].Value[],InstanceId]' --output text ${PRO} | sed '$!N;s/\n/ /' | awk '{print $2, $1}'
+  }
+  echo
+}
+#####################################################################
+STOP_all_ec2_instances_by_tag()
+{
+  ask_tag ${1}
+  ask_region
+  ask_profile
+  test -n $my_tag && {
+    for i in $(aws ec2 describe-instances ${REGION} --filters "Name=tag:Name,Values=*${my_tag}*" --query 'Reservations[].Instances[].[InstanceId]' --output text ${PRO})
+    do
+      aws ec2 stop-instances ${REGION} --instance-ids ${i} ${PRO}
+    done
+  }
+  echo
+}
+#####################################################################
+STOP_ec2_instance_by_instance_ids()
+{
+  if [[ $# -lt 1 ]]; then
+     echo "Provide instance-id\(s\) as input to this function.."
+  else
+    ask_region
+    ask_profile
+    for i in $*
+    do
+      aws ec2 stop-instances ${REGION} --instance-ids ${i} ${PRO}
+    done
+  fi
+  echo
+}
+#####################################################################
+Start_all_ec2_instances_by_tag()
+{
+  ask_tag ${1}
+  ask_region
+  ask_profile
+  test -n $my_tag && {
+    for i in $(aws ec2 describe-instances ${REGION} --filters "Name=tag:Name,Values=*${my_tag}*" --query 'Reservations[].Instances[].[InstanceId]' --output text ${PRO})
+    do
+      aws ec2 start-instances ${REGION} --instance-ids ${i} ${PRO}
+    done
+  }
+  echo
+}
+#####################################################################
+Start_ec2_instance_by_instance_ids()
+{
+  if [[ $# -lt 1 ]]; then
+     echo "Provide instance-id\(s\) as input to this function.."
+  else
+    ask_region
+    ask_profile
+    for i in $*
+    do
+      aws ec2 start-instances ${REGION} --instance-ids ${i} ${PRO}
+    done
+  fi
+  echo
+}
+#####################################################################
+Status_ec2_instance_by_instance_id()
+{
+  if [[ $# -lt 1 ]]; then
+     echo "Provide \"instance-id\" as input to this function.."
+  else
+    ask_region
+    ask_profile
+    aws ec2 describe-instance-status ${REGION} --instance-id ${1} ${PRO}
+  fi
+  echo
+}
+#####################################################################
+us_east_cidrs()
+{
+  curl -s https://ip-ranges.amazonaws.com/ip-ranges.json | jq '.prefixes[] | select(.region=="us-east-1")| .ip_prefix'
+  echo
+}
+#####################################################################
+check()
+{
+  hash nc 2>/dev/null && {
+    if [[ $# -eq 1 && -f ${1} ]]; then
+       for i in $(cat ${1})
+       do
+         domain=$(awk -F, '{print $1}')
+    	   port=$(awk -F, '{print $2}')
+    	   nc -w 2 -z $domain $port 2>/dev/null
+	     if [ $? -eq 0 ]; then
+	       echo "SUCCESS: Connected to $domain on port $port"
+	     else
+	       echo "ERROR  : Failed to connect to $domain on port $port"
+	     fi
+       done
+    elif [[ $# -eq 2 ]]; then
+       domain=${1}; port=${2}
+       nc -w 2 -z $domain $port 2>/dev/null
+	   if [ $? -eq 0 ]; then
+	     echo "SUCCESS: Connected to $domain on port $port"
+	   else
+	     echo "ERROR  : Failed to connect to $domain on port $port"
+	   fi
+    fi
+  } || echo "NetCat NOT Found on this system!"
+}
+#####################################################################
+list_iam_groups()
+{
+  ask_region
+  ask_profile
+  aws iam list-groups --query "Groups[].[GroupName]" ${REGION} --output text ${PRO}
+}
+#####################################################################
+list_iam_users()
+{
+  ask_region
+  ask_profile
+  aws iam list-users --query "Users[].[UserName]" ${REGION} --output text ${PRO}
+}
+#####################################################################
+list_db_instance_identifiers()
+{
+  ask_region
+  ask_profile
+  aws rds describe-db-instances --query 'DBInstances[*].[DBInstanceIdentifier]' ${REGION} --output text ${PRO}
+}
+#####################################################################
+create_db_snapshot()
+{
+  ask_region
+  ask_profile
+  echo "Provide DB Instance Identifier.. ie., DB instance name:"
+  read DB_Instance_Identifier
+  echo
+  echo "Provide DB Snapshot Identifier - a LABEL for tracking:"
+  read DB_Snapshot_Identifier
+
+  if [[ -n ${DB_Instance_Identifier } && -n ${DB_Snapshot_Identifier} ]]; then
+      aws rds create-db-snapshot --db-snapshot-identifier ${DB_Snapshot_Identifier} --db-instance-identifier ${DB_Instance_Identifier} ${PRO}
+	  if [[ $? -eq 0 ]]; then
+	     echo "Success:  DB Snapshot created for ${DB_Instance_Identifier}"
+	  else
+	     echo "ERROR: something is NOT Right.. create DB Snapshot FAILED!"
+	  fi
+  fi
+}
+#####################################################################
+get_eips()
+{
+  ask_region
+  ask_profile
+  aws ec2 describe-addresses ${REGION} ${PRO} | jq -r '.Addresses[] | [.PublicIp, .Tags[0].Value] | @tsv'
+}
+#####################################################################
+# java process detail
+jd()
+{
+  is_one_arg $* && is_digit ${1} && {
+    for i in $(ps -ef | grep $1 | grep -v grep)
+    do
+      ((count = count +1))
+      echo "ITEM $count = $i"
+    done
+  }
+}
+#####################################################################
+clog()
+{
+  tail -100f /var/log/cloud-init-output.log
+}
+#####################################################################
+cgrep()
+{
+  tail -f /var/log/cloud-init-output.log | grep -iE "error|exception"
+}
+ee_clog()
+{
+  grep -B 5 -A 5 -iE "error|exception|fatal" /var/log/cloud-init-output.log
+}
+#####################################################################
+get_pipelines()
+{
+  ask_region
+  ask_profile
+  aws codepipeline list-pipelines ${REGION} ${PRO} | jq -cr '.pipelines[].name'
+}
+#####################################################################
+START_pipeline()
+{
+  ask_region
+  ask_profile
+  ask_pipeline_name
+  temp_file=/tmp/pipeline_$(ts)
+  aws codepipeline start-pipeline-execution --name ${my_pipeline} ${REGION} ${PRO} | jq '.pipelineExecutionId' >> ${temp_file}
+  echo "AWS CodePipeline Execution ID for \"${my_pipeline}\" - $(cat ${temp_file})"
+  rm ${temp_file}
+}
+#####################################################################
+get_pipeline_exec_info()
+{
+  ERROR=false
+  ask_region
+  ask_profile
+  ask_pipeline_name
+  ask_pipeline_exec_id
+  if ! ${ERROR}; then
+     echo -n "Pipeline Execution Status is = "
+     aws codepipeline get-pipeline-execution --pipeline-name ${my_pipeline} --pipeline-execution-id ${pipeline_exec_id} ${REGION} ${PRO} | jq -cr '.pipelineExecution.status'
+  fi
+}
+#####################################################################
+get_pipeline_state()
+{
+  ask_region
+  ask_profile
+  ask_pipeline_name
+  aws codepipeline get-pipeline-state --name ${my_pipeline} ${REGION} ${PRO} | jq -cr '.stageStates[] | .actionStates[] | .actionName + " - " + .latestExecution.status'
+}
+#####################################################################
+get_pipeline_stages()
+{
+  ask_region
+  ask_profile
+  ask_pipeline_name
+  echo "Pipeline Stages are:"
+  echo "##########################"
+  aws codepipeline get-pipeline-state --name ${my_pipeline} ${REGION} ${PRO} | jq -cr '.stageStates[].stageName'
+}
+#####################################################################
+get_pipeline_actions()
+{
+  ask_region
+  ask_profile
+  ask_pipeline_name
+  echo "Pipeline Actions are:"
+  echo "##########################"
+  aws codepipeline get-pipeline-state --name ${my_pipeline} ${REGION} ${PRO} | jq -cr '.stageStates[] | .actionStates[] | .actionName'
+}
+#####################################################################
+get_public_record_sets()
+{
+  ask_profile
+  for i in $(aws route53 list-hosted-zones ${PRO} | jq -cr '.HostedZones[] | if .Config.PrivateZone == false then .Id else empty end')
+  do
+    zone_id=$(echo $i | cut -d/ -f3)
+    echo "Zone ID - $zone_id"
+    aws route53 list-resource-record-sets --hosted-zone-id ${zone_id} ${PRO} | jq -cr '.ResourceRecordSets[] | "\(.Type),\(.Name)"'
+	echo "#####################################################################"
+  done
+}
+#####################################################################
