@@ -275,7 +275,7 @@ ask_region()
   # 
   if is_ec2; then
      echo "On EC2 Node.."
-	 my_region=$(region)
+	 my_region="$(ec2-metadata -z | cut -d' ' -f2 | sed 's/.$//')"
 	 REGION="--region ${my_region}"
   else
      echo -n "region: [default: us-east-1]"
@@ -693,5 +693,11 @@ get_public_record_sets()
     aws route53 list-resource-record-sets --hosted-zone-id ${zone_id} ${PRO} | jq -cr '.ResourceRecordSets[] | "\(.Type),\(.Name)"'
 	echo "#####################################################################"
   done
+}
+#####################################################################
+list_roles()
+{
+  ask_profile
+  aws iam list-roles ${PRO} | jq .Roles[].RoleName
 }
 #####################################################################
