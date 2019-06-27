@@ -417,6 +417,18 @@ get_all_tags()
 }
 alias tags="get_all_tags"
 #####################################################################
+# Get instance tags - while logged on the instance and filter the results with jq, to get what we want.
+itags()
+{
+  if is_ec2; then
+     ask_region
+     inst_id=$(ec2-metadata -i | cut -d' ' -f2)
+     # explicitly get the values for those items for which Key is one of Environment, Name or Program.
+     aws ec2 describe-tags --filters "Name=resource-id,Values=${inst_id}" ${REGION} | jq '.Tags[] | select(( .Key == "Environment") or (.Key == "Name") or (.Key == "Program")) | .Value'
+     # aws ec2 describe-tags --filters "Name=resource-id,Values==${inst_id}" --region us-east-1
+  fi
+}
+#####################################################################
 list_all_regions()
 {
   ask_region
