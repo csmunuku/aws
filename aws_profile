@@ -271,8 +271,8 @@ ask_region()
 { 
   # if you are on a your laptop, ask for region input
   # if you are on aws node then, the aws cli commands use a Role 
-  # "hyla-aws-main-role" OR "prod-aws-main-role" OR "nonp-aws-main-role" to figure out the region.
-  # 
+  # to figure out the region, use temporary Access Key, Secret Access Key and security token.
+  
   if is_ec2; then
      echo "On EC2 Node.."
 	 my_region="$(ec2-metadata -z | cut -d' ' -f2 | sed 's/.$//')"
@@ -290,8 +290,10 @@ ask_region()
 ask_profile()
 {
   ERROR=false
-  # if you are on a your laptop, ask for profile input
-  # if you are on aws node, then, the aws cli commands use a Role "hyla-aws-main-role"
+  # if you are on a your laptop, ask for region input
+  # if you are on aws node then, the aws cli commands use a Role 
+  # to figure out the region, use temporary Access Key, Secret Access Key and security token.
+  
   if ! is_ec2; then
      echo -n "profile: "
      read my_profile
