@@ -1,0 +1,147 @@
+#!/bin/bash
+#####################################################################################
+# AUTHOR: Chandra Munukutla
+# DESC: This file is like a profile file that is needs to be sourced
+#       to use the functions - asking questions to user for input
+#####################################################################################
+#Environment Variables
+# AWS_ACCESS_KEY_ID – Specifies an AWS access key associated with an IAM user or role.
+# AWS_SECRET_ACCESS_KEY – Specifies the secret key associated with the access key. 
+#                         This is essentially the "password" for the access key.
+# AWS_SESSION_TOKEN – Specifies the session token value that is required
+#                      if you are using temporary security credentials. 
+
+# Sourcing aws_checks file
+source ./aws_checks
+
+ask_profile()
+{
+  # if you are on a your laptop, ask for profile input
+  # if you are on aws node, hostname starts with "ip", then, 
+  # profile is NOT needed and the current region is picked based on EC2 Metadata info
+  # and respective AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and AWS_SESSION_TOKEN are provided by a Role
+  # that you might setup OR via those specific Env variables you must setup.
+
+  if ! is_ec2; then
+     echo "Enter AWS profile that you would like to use"
+     echo "This would typically come from your ~/.aws/credentials file."
+     echo -n "profile : "
+     read my_profile
+     if [[ -z $my_profile ]]; then
+        echo "ERROR: Profile NOT provided.."
+        PRO=
+     else
+        PRO="--profile ${my_profile}"
+     fi
+  else
+     PRO=
+  fi
+}
+#####################################################################################
+ask_region()
+{
+  # if you are on a your laptop, ask for profile input
+  # if you are on aws node, hostname starts with "ip",
+  #    then, region is NOT needed as it defaults to the region that the node is in.
+  if ! is_ec2; then
+     echo -n "region: [default: us-east-1]"
+     read my_region
+     if [[ -z $my_region ]]; then
+        my_region="us-east-1"
+     fi
+     REG="--region ${my_region}"
+  else
+     my_region=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone | cut -d' ' -f2 | sed 's/.$//')
+     REG="--region ${my_region}"
+  fi
+}
+#####################################################################################
+# Ask user id for the user.
+ask_user()
+{
+  echo -n "Please provide User ID of the user: "
+  read my_user
+  if [[ -z $my_user ]]; then
+     echo "ERROR: User ID NOT provided OR Empty string provided!"
+     echo "Exiting now!"
+     exit 1
+  else
+     MY_USER="--user-name ${my_user}"
+  fi
+}
+#####################################################################################
+# Ask Group name.
+ask_group()
+{
+  echo -n "Please provide Group Name: "
+  read my_group
+  if [[ -z $my_group ]]; then
+     echo "ERROR: Group Name NOT provided OR Empty string provided!"
+     echo "Exiting now!"
+     exit 1
+  else
+     MY_GROUP="${my_group}"
+  fi
+}
+#####################################################################################
+ask_tag()
+{
+  ERROR=false
+  # you need to provide tag to query (and get results) based on the tag.
+  if [[ $# -eq 1 ]]; then
+     my_tag="${1}"
+  else
+     echo -n "Provide tag: "
+     read my_tag
+     if [[ -z $my_tag ]]; then
+        echo "ERROR: Tag is empty!!"
+        echo "ERROR: Please provide tag!!"
+        ERROR=true
+     fi
+  fi
+}
+#####################################################################################
+ask_pipeline_name()
+{
+  ERROR=false
+  # Ask a pipeline name
+  if [[ $# -eq 1 ]]; then
+     my_pipeline="${1}"
+  else
+     echo -n "Please Provide Pipeline Name: "
+     read my_pipeline
+     if [[ -z $my_pipeline ]]; then
+        echo "ERROR: Pipeline Name is empty!!"
+        echo "ERROR: Please provide Pipeline Name!!"
+        ERROR=true
+     fi
+  fi
+}
+#####################################################################################
+ask_pipeline_exec_id()
+{
+  ERROR=false
+  echo -n "Please Provide Pipeline Execution ID: "
+  read pipeline_exec_id
+  if [[ -z $pipeline_exec_id ]]; then
+     echo "ERROR: Pipeline Execution ID is empty!!"
+     echo "ERROR: Please provide Pipeline Execution ID!!"
+     ERROR=true
+  fi
+}
+#####################################################################################
+ask_policy_file()
+{
+   echo -n "Provide Policy file name: "
+   read MY_POLICY
+   if [[ -z $MY_POLICY ]]; then
+       echo "ERROR: Policy file name provided is EMPTY!"
+       echo "Exiting now!"
+       exit 1
+   fi
+}
+#####################################################################################
+
+#####################################################################################
+
+

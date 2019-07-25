@@ -1,0 +1,93 @@
+#!/bin/bash
+####################################################################
+# AUTHOR: Chandra Munukutla
+# DESC: source this file to run some checks with other scripts.
+####################################################################
+
+is_nitro_instance()
+{
+  if [[ -f /sys/devices/virtual/dmi/id/board_asset_tag ]] && [[ $(cat /sys/devices/virtual/dmi/id/board_asset_tag | cut -c1-2) == "i-" ]]; then
+#    echo "AWS Nitro Instance"
+     true
+  else
+     false
+  fi
+}
+#########################################################################
+is_hypervisor_uuid()
+{
+  if [[ -f /sys/hypervisor/uuid ]] && [[ "$(cut -c1-3 /sys/hypervisor/uuid)" == "ec2" ]]; then
+#    echo "AWS - Node is EC2 instance"
+     true
+  else
+     false
+  fi
+}
+#########################################################################
+inst_metadata()
+{
+  if [[ $(curl -s -m 2 -q  http://169.154.169.254/latest/meta-data/ -o /tmp/test.txt) ]]; then
+     rm /tmp/test.txt
+     true
+  else
+     false
+  fi
+}
+#########################################################################
+is_aws()
+{
+  if [[ $(curl -s http://169.254.169.254/latest/meta-data/services/partition | cut -c1-3) == "aws" ]]; then
+     true
+  else
+     false
+  fi
+}
+#########################################################################
+is_ec2()
+{
+  ERROR=false
+  is_nitro_instance || is_hypervisor_uuid 
+  if [[ "$(uname)" == "Linux" && (inst_metadata || is_nitro_instance || is_hypervisor_uuid || is_aws) ]]; then
+     true
+  else
+     false
+  fi
+#########################################################################
+# jq check
+jq_check()
+{
+  echo "JQ Check"
+  command -v jq &>/dev/null || {
+     echo "JQ tool is NOT installed!!"
+     echo "Please install and retry.. Exiting NOW!"
+     exit 1
+  }
+}
+###################################################################
+ec2-metadata_check()
+{
+  echo "ec2-metadata Check"
+  command -v ec2-metadata &>/dev/null || {
+    echo "ERROR: \"ec2-metadata\" is NOT FOUND!"
+    echo "Try installing \"ec2-metadata\" using below commands.."
+    echo "sudo curl http://s3.amazonaws.com/ec2metadata/ec2-metadata -o /usr/local/bin/ec2-metadata && \
+    chmod +x /usr/local/bin/ec2-metadata"
+  }
+}
+###################################################################
+# jq check
+aws_cli_check()
+{
+  echo "AWS CLI Check"
+  command -v aws &>/dev/null || {
+     echo "AWS CLI is NOT installed!!"
+     echo "Refer to the below links"
+     echo "https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html"
+     echo "https://docs.aws.amazon.com/cli/latest/userguide/install-macos.html"
+     echo "https://docs.aws.amazon.com/cli/latest/userguide/install-linux.html"
+     echo
+     echo "Please install and retry.. Exiting NOW!"
+     exit 1
+  }
+}
+###################################################################
