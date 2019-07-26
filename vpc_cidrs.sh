@@ -8,9 +8,6 @@
 
 source ./aws_checks
 
-jq_check
-aws_cli_check
-
 # the list - dev qa uat prod japan-tokyo - are Profiles we have in our ~/.aws/credentials file.
 for i in dev qa uat prod japan-tokyo
 do

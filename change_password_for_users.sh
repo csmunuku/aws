@@ -6,8 +6,6 @@
 ###################################################################################
 source ./aws_ask_file
 
-jq_check
-
 if [ $# -ne 1 ]; then
    echo "Provide username of a user as argument to this script"
    echo "To Change the user's password to a random string"

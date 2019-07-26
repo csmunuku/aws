@@ -3,7 +3,7 @@
 # AUTHOR: Chandra Munukutla
 # DESC: source this file to run some checks with other scripts.
 ####################################################################
-
+# checking if the instance is an AWS Nitro Instance
 is_nitro_instance()
 {
   if [[ -f /sys/devices/virtual/dmi/id/board_asset_tag ]] && [[ $(cat /sys/devices/virtual/dmi/id/board_asset_tag | cut -c1-2) == "i-" ]]; then
@@ -14,6 +14,7 @@ is_nitro_instance()
   fi
 }
 #########################################################################
+# checking if the instance is ec2 based on the Hypervisor UUID
 is_hypervisor_uuid()
 {
   if [[ -f /sys/hypervisor/uuid ]] && [[ "$(cut -c1-3 /sys/hypervisor/uuid)" == "ec2" ]]; then
@@ -24,6 +25,7 @@ is_hypervisor_uuid()
   fi
 }
 #########################################################################
+# checking if the instance meta-data url exists
 inst_metadata()
 {
   if [[ $(curl -s -m 2 -q  http://169.154.169.254/latest/meta-data/ -o /tmp/test.txt) ]]; then
@@ -34,6 +36,7 @@ inst_metadata()
   fi
 }
 #########################################################################
+# Checking the partition to see if the instance is aws instance.
 is_aws()
 {
   if [[ $(curl -s http://169.254.169.254/latest/meta-data/services/partition | cut -c1-3) == "aws" ]]; then
@@ -43,6 +46,8 @@ is_aws()
   fi
 }
 #########################################################################
+# is_ec2 checks if the instance is an AWS EC2 instance and returns true or false
+# based on the result. This check is for Linux nodes
 is_ec2()
 {
   ERROR=false
@@ -64,6 +69,7 @@ jq_check()
   }
 }
 ###################################################################
+# ec2-metadata script check
 ec2-metadata_check()
 {
   echo "ec2-metadata Check"
@@ -75,7 +81,7 @@ ec2-metadata_check()
   }
 }
 ###################################################################
-# jq check
+# aws CLI check
 aws_cli_check()
 {
   echo "AWS CLI Check"
@@ -91,3 +97,6 @@ aws_cli_check()
   }
 }
 ###################################################################
+# Calling few checks
+jq_check
+aws_cli_check

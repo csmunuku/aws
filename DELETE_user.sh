@@ -26,7 +26,7 @@ source ./aws_ask_file
 get_Access_Key_Id()
 {
   #echo "get_Access_Key_Id"
-  aws iam list-access-keys ${USER} ${PRO} | jq -cr '.AccessKeyMetadata[] | .AccessKeyId'
+  aws iam list-access-keys ${MY_USER} ${PRO} | jq -cr '.AccessKeyMetadata[] | .AccessKeyId'
 }
 
 # Step 1
@@ -34,14 +34,14 @@ delete_Access_Key()
 {
   echo "delete_Access_Key"
   Access_Key_Id=${1}
-  aws iam delete-access-key --access-key ${Access_Key_Id} ${USER} ${PRO}
+  aws iam delete-access-key --access-key ${Access_Key_Id} ${MY_USER} ${PRO}
 }
 
 # Step 2
 list_Signing_Certificates()
 {
   #echo "list_Signing_Certificates"
-  aws iam list-signing-certificates ${USER} ${PRO} | jq -cr '.Certificates[].CertificateId'
+  aws iam list-signing-certificates ${MY_USER} ${PRO} | jq -cr '.Certificates[].CertificateId'
 }
 
 # Step 2
@@ -49,20 +49,20 @@ delete_Signing_Certificate()
 {
   echo "delete_Signing_Certificate"
   signing_certificate=${1}
-  aws iam delete-signing-certificate ${USER} --certificate-id ${signing_certificate} ${PRO}
+  aws iam delete-signing-certificate ${MY_USER} --certificate-id ${signing_certificate} ${PRO}
 }
 
 # Step 3
 get_Login_Profile()
 {
   echo "get_Login_Profile"
-  aws iam get-login-profile ${USER} ${PRO} | jq -cr '.LoginProfile.UserName'
+  aws iam get-login-profile ${MY_USER} ${PRO} | jq -cr '.LoginProfile.UserName'
 }
 
 delete_Login_Profile()
 {
   echo "delete_Login_Profile"
-  aws iam delete-login-profile ${USER} ${PRO}
+  aws iam delete-login-profile ${MY_USER} ${PRO}
 }
 
 # Step 4
@@ -85,7 +85,7 @@ list_User_Policies()
 {
   # echo "list_User_Policies"
   # Will list out the Policy Names (not policy ARN)
-  aws iam list-user-policies ${USER} ${PRO} --output text
+  aws iam list-user-policies ${MY_USER} ${PRO} --output text
 }
 
 # Step 5
@@ -93,14 +93,14 @@ delete_User_Policy()
 {
   echo "delete_User_Policy"
   policy_Name=${1}
-  aws iam delete-user-policy ${USER} --policy-name ${policy_Name} ${PRO}
+  aws iam delete-user-policy ${MY_USER} --policy-name ${policy_Name} ${PRO}
 }
 
 # Step 5
 # list attached user policies (managed policies)
 list_Attached_User_Policies()
 {
-  aws iam list-attached-user-policies ${USER} ${PRO} | jq -cr '.AttachedPolicies[].PolicyArn'
+  aws iam list-attached-user-policies ${MY_USER} ${PRO} | jq -cr '.AttachedPolicies[].PolicyArn'
 }
   
 # Step 5
@@ -108,35 +108,34 @@ list_Attached_User_Policies()
 detach_Managed_Policy()
 {
   policy_arn=${1}
-  aws iam detach-user-policy ${USER} --policy-arn ${policy_arn} ${PRO}
+  aws iam detach-user-policy ${MY_USER} --policy-arn ${policy_arn} ${PRO}
 }
   
 # Step 6
 list_Groups()
 {
   #echo "list_Groups"
-  aws iam list-groups-for-user ${USER} ${PRO} | jq -cr '.Groups[].GroupName'
+  aws iam list-groups-for-user ${MY_USER} ${PRO} | jq -cr '.Groups[].GroupName'
 }
 
 remove_User_From_Group()
 {
   echo "remove_User_From_Group"
   group_name=${1}
-  aws iam remove-user-from-group ${USER} --group-name ${group_name} ${PRO}
+  aws iam remove-user-from-group ${MY_USER} --group-name ${group_name} ${PRO}
 }
 
 # Step 7
 delete_User()
 {
   echo "delete_User"
-  aws iam delete-user ${USER} ${PRO}
+  aws iam delete-user ${MY_USER} ${PRO}
 }
 
 ##########################
 # CALL Functions
 ##########################
 # functions coming from sourced files.
-jq_check
 ask_profile
 ask_user
 

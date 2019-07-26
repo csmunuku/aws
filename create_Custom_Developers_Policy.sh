@@ -5,7 +5,6 @@
 #################################################################################
 source ./aws_ask_file
 
-jq_check
 ask_region
 ask_profile
 ask_policy_file
