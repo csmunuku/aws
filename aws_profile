@@ -18,28 +18,7 @@ alias egrep="egrep --color=auto"
 #GREP_COLORS='ms=1;31:mc=1;31:sl=:cx=:fn=35:ln=32:bn=32:se=36'
 #export GREP_COLORS
 #####################################################################
-ec2-metadata_check()
-{
-  command -v ec2-metadata &>/dev/null || {
-    echo "ERROR: \"ec2-metadata\" is NOT FOUND!"
-	echo "Try installing \"ec2-metadata\" using below commands.."
-	echo "sudo curl http://s3.amazonaws.com/ec2metadata/ec2-metadata -o /usr/local/bin/ec2-metadata && \
-	chmod +x /usr/local/bin/ec2-metadata"
-  }
-}
-ec2-metadata_check
-#####################################################################
-jq_check()
-{
-  command -v jq &>/dev/null || {
-    echo "ERROR: \"jq\" is NOT FOUND! profile might not work"
-	echo "Try installing \"jq\" using below command.."
-	echo "sudo yum install -y jq"
-	echo "OR"
-	echo "sudo dnf install jq"
-  }
-}
-jq_check
+source ./aws_ask_file
 #####################################################################
 myfns()
 {
@@ -98,57 +77,6 @@ alias lsf=fns
 ##########################################################################
 ##########################################################################
 ##########################################################################
-##########################################################################
-is_nitro_instance()
-{
-  if [[ -f /sys/devices/virtual/dmi/id/board_asset_tag ]] && [[ $(cat /sys/devices/virtual/dmi/id/board_asset_tag | cut -c1-2) == "i-" ]]; then
-#     echo "AWS Nitro Instance"
-	 true
-  else
-     false
-  fi
-}
-#########################################################################
-is_hypervisor_uuid()
-{
-  if [[ -f /sys/hypervisor/uuid ]] && [[ "$(cut -c1-3 /sys/hypervisor/uuid)" == "ec2" ]]; then
-#     echo "AWS - Node is EC2 instance"
-	 true
-  else
-     false
-  fi
-}
-#########################################################################
-inst_metadata()
-{
-  if [[ $(curl -s -m 2 -q  http://169.154.169.254/latest/meta-data/ -o /tmp/test.txt) ]]; then
-     rm /tmp/test.txt
-     true
-  else
-     false
-  fi
-}
-#########################################################################
-is_aws()
-{
-  if [[ $(curl -s http://169.254.169.254/latest/meta-data/services/partition | cut -c1-3) == "aws" ]]; then
-     true
-  else
-     false
-  fi
-}
-#########################################################################
-is_ec2()
-{
-  ERROR=false
-  is_nitro_instance || is_hypervisor_uuid 
-  if [[ "$(uname)" == "Linux" && (inst_metadata || is_nitro_instance || is_hypervisor_uuid || is_aws) ]]; then
-     true
-  else
-     false
-  fi
-}
-#########################################################################
 my_ip()
 {
   if is_ec2; then
@@ -159,17 +87,6 @@ my_ip()
 }
 alias myip=my_ip
 #########################################################################
-jq_check()
-{
-  command -v jq &>/dev/null || {
-    echo "ERROR: \"${1}\" NOT FOUND! profile might not work"
-	echo "Try installing \"jq\" using below command.."
-	echo "sudo yum install -y jq"
-  }
-}
-jq_check
-#########################################################################
-
 if is_ec2; then
    instance_id()
    {
@@ -221,93 +138,6 @@ if is_ec2; then
    }
 fi
 #####################################################################
-ask_tag()
-{
-  ERROR=false
-  # you need to provide tag to query (and get results) based on the tag.
-  if [[ $# -eq 1 ]]; then
-     my_tag="${1}"
-  else
-     echo -n "Provide tag: "
-     read my_tag
-     if [[ -z $my_tag ]]; then
-        echo "ERROR: Tag is empty!!"
-	    echo "ERROR: Please provide tag!!"
-		ERROR=true
-     fi
-  fi
-}
-#####################################################################
-ask_pipeline_name()
-{
-  ERROR=false
-  # Ask a pipeline name
-  if [[ $# -eq 1 ]]; then
-     my_pipeline="${1}"
-  else
-     echo -n "Please Provide Pipeline Name: "
-     read my_pipeline
-     if [[ -z $my_pipeline ]]; then
-        echo "ERROR: Pipeline Name is empty!!"
-	    echo "ERROR: Please provide Pipeline Name!!"
-		ERROR=true
-     fi
-  fi
-}
-#####################################################################
-ask_pipeline_exec_id()
-{
-  ERROR=false
-  echo -n "Please Provide Pipeline Execution ID: "
-  read pipeline_exec_id
-  if [[ -z $pipeline_exec_id ]]; then
-     echo "ERROR: Pipeline Execution ID is empty!!"
-     echo "ERROR: Please provide Pipeline Execution ID!!"
-	 ERROR=true
-  fi
-}
-#####################################################################
-ask_region()
-{ 
-  # if you are on a your laptop, ask for region input
-  # if you are on aws node then, the aws cli commands use a Role 
-  # to figure out the region, use temporary Access Key, Secret Access Key and security token.
-  
-  if is_ec2; then
-     echo "On EC2 Node.."
-	 my_region="$(ec2-metadata -z | cut -d' ' -f2 | sed 's/.$//')"
-	 REGION="--region ${my_region}"
-  else
-     echo -n "region: [default: us-east-1]"
-     read my_region
-     if [[ -z $my_region ]]; then
-        my_region="us-east-1"
-     fi
-	 REGION="--region ${my_region}"
-  fi
-}
-#####################################################################
-ask_profile()
-{
-  ERROR=false
-  # if you are on a your laptop, ask for region input
-  # if you are on aws node then, the aws cli commands use a Role 
-  # to figure out the region, use temporary Access Key, Secret Access Key and security token.
-  
-  if ! is_ec2; then
-     echo -n "profile: "
-     read my_profile
-     if [[ -z $my_profile ]]; then
-        echo "ERROR: Profile NOT provided.."
-		ERROR=true
-		PRO=
-     else
-	    PRO="--profile ${my_profile}"
-     fi
-  else
-     PRO=
-  fi
-}
 #####################################################################
 get_bastion_ips()
 {
@@ -318,6 +148,7 @@ get_bastion_ips()
   fi
 }
 alias bastion="get_bastion_ips"
+alias bastions="get_bastion_ips"
 #####################################################################
 get_vpc_ids()
 {
@@ -376,7 +207,6 @@ appservers()
   test -n $my_tag && {
     aws ec2 describe-instances --filters "Name=tag:Name,Values=*${my_tag}*" ${REGION} --query 'Reservations[*].Instances[*].[Tags[?Key==`Name`].Value[],PrivateIpAddress]' ${PRO} --output text | sed 's/None$/None\n/' | sed '$!N;s/\n/ /' | awk '{print $2, $1}'
   }
-
   echo
 }
 #####################################################################
@@ -388,7 +218,17 @@ webservers()
   test -n $my_tag && {
     aws ec2 describe-instances --filters "Name=tag:Name,Values=*${my_tag}*" ${REGION} --query 'Reservations[*].Instances[*].[Tags[?Key==`Name`].Value[],PrivateIpAddress]' ${PRO} --output text | sed 's/None$/None\n/' | sed '$!N;s/\n/ /' | awk '{print $2, $1}'
   }
-
+  echo
+}
+#####################################################################
+batchserver()
+{
+  ask_tag batch
+  ask_region
+  ask_profile
+  test -n $my_tag && {
+    aws ec2 describe-instances --filters "Name=tag:Name,Values=*${my_tag}*" ${REGION} --query 'Reservations[*].Instances[*].[Tags[?Key==`Name`].Value[],PrivateIpAddress]' ${PRO} --output text | sed 's/None$/None\n/' | sed '$!N;s/\n/ /' | awk '{print $2, $1}'
+  }
   echo
 }
 #####################################################################
@@ -541,20 +381,22 @@ check()
 {
   hash nc 2>/dev/null && {
     if [[ $# -eq 1 && -f ${1} ]]; then
-       for i in $(cat ${1})
+       while read -r i
        do
-         domain=$(awk -F, '{print $1}')
-    	   port=$(awk -F, '{print $2}')
-    	   nc -w 2 -z $domain $port 2>/dev/null
-	     if [ $? -eq 0 ]; then
-	       echo "SUCCESS: Connected to $domain on port $port"
-	     else
-	       echo "ERROR  : Failed to connect to $domain on port $port"
+         if [[ $(echo $i | grep -c "^#") -ne 1 ]]; then
+            domain=$(echo $i | awk -F, '{print $1}')
+    	    port=$(echo $i | awk -F, '{print $2}')
+    	    nc -w 5 -z $domain $port 2>/dev/null
+	        if [ $? -eq 0 ]; then
+	           echo "SUCCESS: Connected to $domain on port $port"
+	        else
+	           echo "ERROR  : Failed to connect to $domain on port $port"
+	        fi
 	     fi
-       done
+       done < ${1}
     elif [[ $# -eq 2 ]]; then
        domain=${1}; port=${2}
-       nc -w 2 -z $domain $port 2>/dev/null
+       nc -w 5 -z $domain $port 2>/dev/null
 	   if [ $? -eq 0 ]; then
 	     echo "SUCCESS: Connected to $domain on port $port"
 	   else
@@ -713,5 +555,12 @@ list_roles()
 {
   ask_profile
   aws iam list-roles ${PRO} | jq .Roles[].RoleName
+}
+#####################################################################
+list_codebuild_images()
+{
+  ask_profile
+  ask_region
+  aws codebuild list-curated-environment-images ${REG} ${PRO} | jq -cr .platforms[].languages[].images[].name
 }
 #####################################################################

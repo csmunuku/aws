@@ -51,7 +51,6 @@ is_aws()
 is_ec2()
 {
   ERROR=false
-  is_nitro_instance || is_hypervisor_uuid 
   if [[ "$(uname)" == "Linux" && (inst_metadata || is_nitro_instance || is_hypervisor_uuid || is_aws) ]]; then
      true
   else
@@ -78,6 +77,9 @@ ec2-metadata_check()
     echo "Try installing \"ec2-metadata\" using below commands.."
     echo "sudo curl http://s3.amazonaws.com/ec2metadata/ec2-metadata -o /usr/local/bin/ec2-metadata && \
     chmod +x /usr/local/bin/ec2-metadata"
+	
+	echo "Please install and retry.. Exiting NOW!"
+	exit 1
   }
 }
 ###################################################################
