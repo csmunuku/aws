@@ -564,3 +564,37 @@ list_codebuild_images()
   aws codebuild list-curated-environment-images ${REG} ${PRO} | jq -cr .platforms[].languages[].images[].name
 }
 #####################################################################
+private_ips()
+{
+  ask_region
+  ask_profile
+  aws ec2 describe-instances --query 'Reservations[*].Instances[*].PrivateIpAddress' ${REG} ${PRO} --output text
+}
+#####################################################################
+asg_names()
+{
+  ask_region
+  ask_profile
+  aws autoscaling describe-auto-scaling-groups ${REG} ${PRO} | jq -cr .AutoScalingGroups[].AutoScalingGroupName
+}
+#####################################################################
+unhealthy_inst_asg()
+{
+  for i in $(asg_names)
+  do
+    for j in $(aws autoscaling describe-auto-scaling-groups --auto-scaling-group-name ${i} ${REG} ${PRO} --output text \
+       --query 'AutoScalingGroups[*].Instances[?HealthStatus==`Unhealthy`].InstanceId')
+    do
+      echo -n "$j - "
+      aws ec2 describe-instances --instance-id ${j} ${REG} ${PRO} | jq -cr '.Reservations[].Instances[].PrivateIpAddress'
+    done
+  done
+}
+#####################################################################
+inst_private_ip()
+{
+  ask_region
+  ask_profile
+  aws ec2 describe-instances --query 'Reservations[*].Instances[*].{Instance:InstanceId,Private_IP:PrivateIpAddress}' ${REG} ${PRO} --output table
+}
+#####################################################################
