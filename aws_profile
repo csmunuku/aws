@@ -9,6 +9,7 @@ alias la='ls -alrt'
 alias ll='ls -alrt'
 alias dfc='df -hPT | column -t'
 ts(){ echo "$(date '+%Y%m%d_%H%M%S')"; }
+ERROR=false
 #####################################
 # GREP Color Options
 #####################################
@@ -84,6 +85,8 @@ my_ip()
   else
      /sbin/ifconfig eth0 | grep "inet addr:" | awk -F: '{print $2}' | cut -d' ' -f1
   fi
+  # If there is a single IP for the node, we can as well get the Private IP via
+  # hostname -I
 }
 alias myip=my_ip
 #########################################################################
@@ -139,12 +142,22 @@ if is_ec2; then
 fi
 #####################################################################
 #####################################################################
+ec2()
+{
+   if ! ${ERROR}; then
+      aws ec2 describe-instances ${REGION} --filters "Name=instance-state-name,Values=running"  --query 'sort_by(Reservations[].Instances[].{Name:Tags[?Key==`Name`]|[0].Value,"Private IP":PrivateIpAddress}, &Name)[]' --output table ${PRO}
+   fi
+}
+alias nodes="ec2"
+alias servers="ec2"
+#####################################################################
 get_bastion_ips()
 {
   ask_region
   ask_profile
   if ! ${ERROR}; then
-    aws ec2 describe-instances --filters "Name=tag:Name,Values=*bastion*" ${REGION} --query 'Reservations[].Instances[].[Tags[?Key==`Name`].Value[],PublicIpAddress]' --output text ${PRO} | sed 's/None$/None\n/' | sed '$!N;s/\n/ /' | sort -k 2 | awk '{print $2, $1}'
+     aws ec2 describe-instances --filters "Name=tag:Name,Values=*bastion*" ${REGION} --query 'sort_by(Reservations[].Instances[].{Name:Tags[?Key==`Name`]|[0].Value,"Public IP":PublicIpAddress}, &Name)[]' --output table ${PRO}
+#    aws ec2 describe-instances --filters "Name=tag:Name,Values=*bastion*" ${REGION} --query 'Reservations[].Instances[].[Tags[?Key==`Name`].Value[],PublicIpAddress]' --output text ${PRO} | sed 's/None$/None\n/' | sed '$!N;s/\n/ /' | sort -k 2 | awk '{print $2, $1}'
   fi
 }
 alias bastion="get_bastion_ips"
@@ -168,7 +181,8 @@ print_tags_private_ips()
   get_vpc_ids ${my_profile} > temp_file
   for i in $(cat temp_file)
   do
-	aws ec2 describe-instances --filters Name=vpc-id,Values=${i} ${REGION} --query 'Reservations[].Instances[].[Tags[?Key==`Name`].Value[],PrivateIpAddress]' --output text ${PRO} | sed 's/None$/None\n/' | sed '$!N;s/\n/ /' | sort -k 2 | awk '{print $2, $1}'
+    aws ec2 describe-instances ${REGION} --filters "Name=vpc-id,Values=${i}" --filters "Name=instance-state-name,Values=running"  --query 'sort_by(Reservations[].Instances[].{Name:Tags[?Key==`Name`]|[0].Value,"Private IP":PrivateIpAddress}, &Name)[]' --output table ${PRO}
+#   aws ec2 describe-instances --filters Name=vpc-id,Values=${i} ${REGION} --query 'Reservations[].Instances[].[Tags[?Key==`Name`].Value[],PrivateIpAddress]' --output text ${PRO} | sed 's/None$/None\n/' | sed '$!N;s/\n/ /' | sort -k 2 | awk '{print $2, $1}'
   done
   echo
   /bin/rm temp_file
@@ -181,7 +195,9 @@ get_private_ip_by_tag()
      ask_region
      ask_profile
      test -n $my_tag && {
-       aws ec2 describe-instances --filters "Name=tag:Name,Values=*${my_tag}*" ${REGION} --query 'Reservations[*].Instances[*].[Tags[?Key==`Name`].Value[],PrivateIpAddress]' ${PRO} --output text | sed 's/None$/None\n/' | sed '$!N;s/\n/ /' | awk '{print $2, $1}'
+        aws ec2 describe-instances ${REGION} --filters "Name=tag:Name,Values=*${my_tag}*" --filters "Name=instance-state-name,Values=running" --query 'sort_by(Reservations[].Instances[].{Name:Tags[?Key==`Name`]|[0].Value,"Private IP":PrivateIpAddress}, &Name)[]' --output table ${PRO}
+#       aws ec2 describe-instances --filters "Name=tag:Name,Values=*${my_tag}*" ${REGION} --query 'Reservations[*].Instances[*].[Tags[?Key==`Name`].Value[],PrivateIpAddress]' ${PRO} --output text | sed 's/None$/None\n/' | sed '$!N;s/\n/ /' | awk '{print $2, $1}'
+        
      }
   fi
   echo
