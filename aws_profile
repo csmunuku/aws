@@ -209,7 +209,8 @@ anchors()
   ask_region
   ask_profile
   test -n $my_tag && {
-    aws ec2 describe-instances --filters "Name=tag:Name,Values=*${my_tag}*" ${REGION} --query 'Reservations[*].Instances[*].[Tags[?Key==`Name`].Value[],PrivateIpAddress]' ${PRO} --output text | sed 's/None$/None\n/' | sed '$!N;s/\n/ /' | awk '{print $2, $1}'
+#    aws ec2 describe-instances --filters "Name=tag:Name,Values=*${my_tag}*" ${REGION} --query 'Reservations[*].Instances[*].[Tags[?Key==`Name`].Value[],PrivateIpAddress]' ${PRO} --output text | sed 's/None$/None\n/' | sed '$!N;s/\n/ /' | awk '{print $2, $1}'
+    aws ec2 describe-instances --filters "Name=tag:Name,Values=*${my_tag}*" ${REGION} --query 'Reservations[*].Instances[*].{Name:Tags[?Key==`Name`]|[0].Value,"Private IP":PrivateIpAddress}, &Name)[]' --output table ${PRO}
   }
 
   echo
