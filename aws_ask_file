@@ -141,7 +141,17 @@ ask_policy_file()
    fi
 }
 #####################################################################################
-
+# Ask Env info
+ask_env()
+{
+  echo -n "Please provide Env: "
+  read MY_ENV
+  if [[ -z $MY_ENV ]]; then
+     echo "ERROR: Env NOT provided OR Empty string provided!"
+     echo "Exiting now!"
+     exit 1
+  fi
+}
 #####################################################################################
 
 
