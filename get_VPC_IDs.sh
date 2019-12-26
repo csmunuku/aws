@@ -1,6 +1,11 @@
 #!/bin/bash
+#####################################################################################
+# AUTHOR: Chandra Munukutla
+# DESC: Get VPC ID (other than the default VPC) in an aws account.
+#       Use aws profile information for accessing the account.
+#####################################################################################
 
-source ./aws_checks
+source ./aws_ask_file
 ask_profile
 ask_env
 
