@@ -1,5 +1,6 @@
 #!/bin/bash
-source .asks_file
+
+source ./aws_checks
 ask_profile
 ask_env
 
