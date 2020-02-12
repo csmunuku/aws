@@ -164,7 +164,7 @@ ask_image_name()
       echo "Image Name (RegEx) is - ${MyImageName}"
    else
       echo "Image Name is EMPTY!"
-          exit 1
+      exit 1
    fi
 }
 #####################################################################################
