@@ -145,11 +145,16 @@ fi
 ec2()
 {
    if ! ${ERROR}; then
-      aws ec2 describe-instances ${REGION} --filters "Name=instance-state-name,Values=running"  --query 'sort_by(Reservations[].Instances[].{Name:Tags[?Key==`Name`]|[0].Value,"Private IP":PrivateIpAddress}, &Name)[]' --output table ${PRO}
+      if [[ $# -eq 0 ]]; then
+         aws ec2 describe-instances ${REGION} --filters "Name=instance-state-name,Values=running"  --query 'sort_by(Reservations[].Instances[].{Name:Tags[?Key==`Name`]|[0].Value,"Private IP":PrivateIpAddress}, &Name)[]' --output table
+      elif [[ $# -eq 1 ]]; then
+           aws ec2 describe-instances ${REGION} --filters "Name=tag:Name,Values=*${1}*" "Name=instance-state-name,Values=running"  --query 'sort_by(Reservations[].Instances[].{Name:Tags[?Key==`Name`]|[0].Value,"Private IP":PrivateIpAddress}, &Name)[]' --output table
+      fi
    fi
 }
 alias nodes="ec2"
 alias servers="ec2"
+alias inst="ec2"
 #####################################################################
 get_bastion_ips()
 {
