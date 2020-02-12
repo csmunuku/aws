@@ -161,9 +161,9 @@ ask_image_name()
    echo "Provide the Image Name \"RegEx\""
    read MyImageName
    if [[ -n "${MyImageName}" ]]; then
-      echo "Name RegEx is - ${MyImageName}"
+      echo "Image Name (RegEx) is - ${MyImageName}"
    else
-      echo "Name RegEx is EMPTY!"
+      echo "Image Name is EMPTY!"
           exit 1
    fi
 }
