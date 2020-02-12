@@ -103,3 +103,4 @@ aws_cli_check()
 # Calling few checks
 jq_check
 aws_cli_check
+ec2-metadata_check

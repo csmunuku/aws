@@ -153,5 +153,17 @@ ask_env()
   fi
 }
 #####################################################################################
-
+# Ask Image Name
+ask_image_name()
+{
+   echo "Provide the Image Name \"RegEx\""
+   read MyImageName
+   if [[ -n "${MyImageName}" ]]; then
+      echo "Name RegEx is - ${MyImageName}"
+   else
+      echo "Name RegEx is EMPTY!"
+          exit 1
+   fi
+}
+#####################################################################################
 
